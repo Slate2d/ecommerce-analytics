@@ -3,7 +3,7 @@
 This project is a complete, end-to-end data analytics platform built to provide business intelligence for a simulated e-commerce business. It includes a full ETL pipeline, a data warehouse, and interactive dashboards for analysis.
 
 ---
-### ## 🏛️ Architecture
+### 🏛️ Architecture
 The project uses a modern data stack running in Docker containers. The data flows from a raw layer through staging to a DWH and data marts, which are then visualized in Apache Superset.
 
 ```mermaid
