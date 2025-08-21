@@ -20,7 +20,7 @@ graph LR
 ```
 
 ---
-### ## ✨ Key Features
+### ✨ Key Features
 * **Automated ETL Pipeline**: Daily data processing managed by Apache Airflow.
 * **Customer Segmentation**: **RFM analysis** (Recency, Frequency, Monetary) to identify key customer segments like "Champions," "Loyal Customers," and "At Risk."
 * **Inventory Management**: **ABC-XYZ analysis** to classify products based on their revenue contribution and demand stability, helping to optimize inventory.
@@ -29,7 +29,7 @@ graph LR
 * **Interactive Dashboards**: A comprehensive BI suite built in Apache Superset to explore all the analyses mentioned above.
 
 ---
-### ## 🛠️ Tech Stack
+### 🛠️ Tech Stack
 * **Data Warehouse**: **ClickHouse**
 * **ETL/Orchestration**: **Apache Airflow**
 * **BI & Visualization**: **Apache Superset**
@@ -37,7 +37,7 @@ graph LR
 * **Core Language**: **Python** (Pandas, Faker, Prophet)
 
 ---
-### ## 🚀 How to Run
+### 🚀 How to Run
 1.  Clone this repository:
     ```bash
     git clone <your-repo-url>
@@ -60,13 +60,13 @@ graph LR
     * **Apache Superset**: `http://localhost:8088`
 
 ---
-### ## 📊 Dashboards Showcase
-*(**IMPORTANT**: Add screenshots of your best dashboards here!)*
+### 📊 Dashboards Showcase
 
 **Executive Overview**
 
-
+![Executive Dashboard Screenshot](./images/dashboard_executive.png)
 **ABC-XYZ Analysis**
 
-
+![ABC-XYZ Matrix Screenshot](./images/abc_xyz_matrix.png)
 **Cohort Retention Analysis**
+![Cohort Retention Screenshot](./images/cohort_analysis.png)
