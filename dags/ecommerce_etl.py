@@ -8,20 +8,18 @@ import pandas as pd
 import numpy as np
 from faker import Faker
 from clickhouse_driver import Client
+from prophet import Prophet
 
-# Инициализация
 fake = Faker()
 Faker.seed(42)
 random.seed(42)
 np.random.seed(42)
 
-# Конфигурация
 PRODUCTS_COUNT = 500
 CUSTOMERS_COUNT = 10000
-ORDERS_PER_DAY = 100  # Среднее количество заказов в день
-DAYS_TO_GENERATE = 365  # Генерируем данные за год
+ORDERS_PER_DAY = 100  
+DAYS_TO_GENERATE = 365  
 
-# Категории и товары
 CATEGORIES = {
     'Electronics': ['Smartphones', 'Laptops', 'Tablets', 'Headphones', 'Cameras'],
     'Clothing': ['T-Shirts', 'Jeans', 'Dresses', 'Shoes', 'Jackets'],
@@ -34,8 +32,7 @@ BRANDS = ['Apple', 'Samsung', 'Nike', 'Adidas', 'Sony', 'LG', 'Zara', 'H&M', 'Ik
 TRAFFIC_SOURCES = ['organic', 'paid_search', 'social_media', 'email', 'direct', 'referral']
 DEVICE_TYPES = ['mobile', 'desktop', 'tablet']
 PAYMENT_METHODS = ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cash_on_delivery']
-# --- CONFIGURATION ---
-# IMPORTANT: Connection string without user/password for the old image
+
 CLICKHOUSE_CONNECTION = {
     'host': 'clickhouse',
     'database': 'ecommerce'
@@ -58,7 +55,7 @@ def generate_products():
             'unit_cost': round(random.uniform(10, 500), 2),
             'unit_price': round(random.uniform(20, 1000), 2),
             'weight_kg': round(random.uniform(0.1, 10), 2),
-            'is_active': random.choice([True, True, True, False]),  # 75% активных
+            'is_active': random.choice([True, True, True, False]), 
             'launch_date': fake.date_between(start_date='-2y', end_date='today')
         }
         products.append(product)
@@ -83,7 +80,7 @@ def generate_customers():
             'registration_date': fake.date_between(start_date='-3y', end_date='today'),
             'customer_lifetime_value': round(random.uniform(100, 10000), 2),
             'preferred_category': random.choice(list(CATEGORIES.keys())),
-            'is_premium': random.choice([True, False, False, False])  # 25% премиум
+            'is_premium': random.choice([True, False, False, False])  
         }
         customers.append(customer)
     
@@ -94,19 +91,16 @@ def generate_orders(execution_date):
     orders = []
     order_items = []
     
-    # Определяем количество заказов (с учетом сезонности)
     base_orders = ORDERS_PER_DAY
-    
-    # Сезонность: больше заказов в конце года и в выходные
     month = execution_date.month
     day_of_week = execution_date.weekday()
     
-    if month in [11, 12]:  # Black Friday, Christmas
+    if month in [11, 12]: 
         base_orders = int(base_orders * 2.5)
-    elif month in [6, 7]:  # Summer sales
+    elif month in [6, 7]:
         base_orders = int(base_orders * 1.3)
     
-    if day_of_week in [5, 6]:  # Weekend
+    if day_of_week in [5, 6]: 
         base_orders = int(base_orders * 1.2)
     
     num_orders = random.randint(int(base_orders * 0.8), int(base_orders * 1.2))
@@ -115,14 +109,12 @@ def generate_orders(execution_date):
         order_id = f'ORD{execution_date.strftime("%Y%m%d")}{str(i+1).zfill(4)}'
         customer_id = f'CUST{str(random.randint(1, CUSTOMERS_COUNT)).zfill(6)}'
         
-        # Случайное время заказа в течение дня
         order_time = execution_date.replace(
             hour=random.randint(0, 23),
             minute=random.randint(0, 59),
             second=random.randint(0, 59)
         )
         
-        # Генерация товаров в заказе
         num_items = random.randint(1, 5)
         order_total = 0
         
@@ -146,7 +138,6 @@ def generate_orders(execution_date):
             }
             order_items.append(item)
         
-        # Скидка (20% заказов со скидкой)
         discount = 0
         if random.random() < 0.2:
             discount = round(order_total * random.uniform(0.05, 0.30), 2)
@@ -175,7 +166,6 @@ def load_initial_data(**context):
     client.execute('CREATE DATABASE IF NOT EXISTS ecommerce')
     
     client = Client(**CLICKHOUSE_CONNECTION)    
-    # Генерируем и загружаем продукты
     products_df = generate_products()
     products_records = products_df.to_dict('records')
     
@@ -188,7 +178,6 @@ def load_initial_data(**context):
     
     logging.info(f"Loaded {len(products_df)} products")
     
-    # Генерируем и загружаем клиентов
     customers_df = generate_customers()
     customers_records = customers_df.to_dict('records')
     
@@ -216,7 +205,6 @@ def load_historical_orders(**context):
         orders_df, items_df = generate_orders(datetime.combine(current_date, datetime.min.time()))
         
         if not orders_df.empty:
-            # Загрузка заказов
             orders_records = orders_df.to_dict('records')
             client.execute(
                 """INSERT INTO raw_orders 
@@ -231,7 +219,6 @@ def load_historical_orders(**context):
             total_orders += len(orders_df)
         
         if not items_df.empty:
-            # Загрузка товаров в заказах
             items_records = items_df.to_dict('records')
             client.execute(
                 """INSERT INTO raw_order_items 
@@ -243,7 +230,7 @@ def load_historical_orders(**context):
             )
             total_items += len(items_df)
         
-        if current_date.day == 1:  # Логируем раз в месяц
+        if current_date.day == 1: 
             logging.info(f"Processed orders up to {current_date}")
         
         current_date += timedelta(days=1)
@@ -380,14 +367,11 @@ def calculate_product_performance(**context):
     logging.info("Product performance and ABC-XYZ analysis completed")
 
 
-# Не забудьте импорты в начале файла
-from prophet import Prophet
 
 def train_and_predict_demand(**context):
     """Обучение модели Prophet и сохранение прогноза в ClickHouse."""
     client = Client(**CLICKHOUSE_CONNECTION)
     
-    # 1. Получаем исторические данные
     query = "SELECT date, total_revenue FROM ecommerce.stg_daily_sales ORDER BY date"
     data = client.execute(query, with_column_types=True)
     
@@ -398,15 +382,12 @@ def train_and_predict_demand(**context):
     df = pd.DataFrame(data[0], columns=[c[0] for c in data[1]])
     df = df.rename(columns={'date': 'ds', 'total_revenue': 'y'})
     
-    # 2. Обучаем модель Prophet
     model = Prophet(daily_seasonality=True, weekly_seasonality=True, yearly_seasonality=True)
     model.fit(df)
     
-    # 3. Делаем прогноз на 30 дней вперед
     future = model.make_future_dataframe(periods=30)
     forecast = model.predict(future)
     
-    # 4. Сохраняем результат в ClickHouse
     forecast_to_load = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']].tail(30)
     forecast_to_load = forecast_to_load.rename(columns={
         'ds': 'forecast_date',
@@ -415,7 +396,6 @@ def train_and_predict_demand(**context):
         'yhat_upper': 'predicted_revenue_upper'
     })
     
-    # Очищаем старые прогнозы перед вставкой новых
     client.execute("TRUNCATE TABLE ecommerce.dwh_demand_forecast")
     
     records = forecast_to_load.to_dict('records')
@@ -515,10 +495,8 @@ def calculate_daily_metrics(**context):
     """Расчет ежедневных метрик (полный пересчет)"""
     client = Client(**CLICKHOUSE_CONNECTION)
     
-    # ИЗМЕНЕНИЕ: Полностью очищаем таблицу перед вставкой
     client.execute("TRUNCATE TABLE IF EXISTS ecommerce.stg_daily_sales")
 
-    # ИЗМЕНЕНИЕ: Убираем фильтр по дате, чтобы посчитать всю историю
     query_daily_sales = """
         INSERT INTO ecommerce.stg_daily_sales 
         (date, total_orders, total_revenue, total_customers, avg_order_value, total_items_sold)
@@ -539,12 +517,8 @@ def calculate_daily_metrics(**context):
         GROUP BY date
     """
     client.execute(query_daily_sales)
-    
-    # ... (код для realtime_metrics можно оставить без изменений) ...
-    
     logging.info("Daily metrics calculated for all history")
 
-# Определение DAG
 default_args = {
     'owner': 'data-team',
     'depends_on_past': False,
@@ -563,9 +537,7 @@ with DAG(
 ) as dag:
     
     start = EmptyOperator(task_id='start')
-    
-    # Эта группа для разовой исторической загрузки
-    # В реальном проекте ее можно вынести в отдельный DAG
+
     initial_load_group = EmptyOperator(task_id='initial_data_load')
     
     init_products_customers = PythonOperator(
@@ -578,7 +550,6 @@ with DAG(
         python_callable=load_historical_orders,
     )
 
-    # Эта группа для ежедневных расчетов
     analytics_processing_group = EmptyOperator(task_id='daily_analytics_processing')
 
     daily_metrics = PythonOperator(
@@ -601,7 +572,6 @@ with DAG(
         python_callable=calculate_cohort_retention,
     )
     
-    # Новые таски
     demand_forecasting = PythonOperator(
         task_id='train_and_predict_demand',
         python_callable=train_and_predict_demand,
@@ -614,11 +584,9 @@ with DAG(
     
     end = EmptyOperator(task_id='end')
     
-    # Определяем зависимости
     start >> initial_load_group
     initial_load_group >> init_products_customers >> load_orders >> analytics_processing_group
     
-    # Аналитические витрины зависят от свежих дневных метрик
     analytics_processing_group >> daily_metrics 
     
     daily_metrics >> [
