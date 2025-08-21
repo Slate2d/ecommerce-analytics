@@ -40,8 +40,8 @@ graph LR
 ### 🚀 How to Run
 1.  Clone this repository:
     ```bash
-    git clone <your-repo-url>
-    cd <your-repo-folder>
+    git clone https://github.com/Slate2d/ecommerce-analytics
+    cd ecommerce-analytics
     ```
 2.  Build and start all services using Docker Compose:
     ```bash
