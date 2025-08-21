@@ -1,0 +1,61 @@
+services:
+  clickhouse:
+    image: yandex/clickhouse-server:21.8 # REVERTED: Using the old Yandex image as requested
+    container_name: clickhouse
+    user: root # KEPT: This is crucial for solving restart/permission issues
+    stop_grace_period: 30s # KEPT: For graceful shutdown
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./clickhouse_data:/var/lib/clickhouse
+      - ./init_ecommerce_tables.sql:/docker-entrypoint-initdb.d/init_ecommerce_tables.sql
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - etl-network
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: airflow
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    ports:
+      - "8081:8080"
+    command: standalone
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - etl-network
+
+  superset:
+    build:
+      context: .
+      dockerfile: Dockerfile.superset
+    container_name: superset
+    environment:
+      - SUPERSET_SECRET_KEY=a_really_long_and_random_secret_key_12345
+      - SUPERSET_CONFIG_PATH=/app/superset_config.py
+    volumes:
+      - ./superset_home:/app/superset_home
+      - ./superset_config.py:/app/superset_config.py
+    ports:
+      - "8088:8088"
+    networks:
+      - etl-network
+
+networks:
+  etl-network:
+    driver: bridge

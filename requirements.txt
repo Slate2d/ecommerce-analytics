@@ -1,0 +1,6 @@
+clickhouse-driver
+pandas
+requests
+python-dotenv
+prophet
+faker
